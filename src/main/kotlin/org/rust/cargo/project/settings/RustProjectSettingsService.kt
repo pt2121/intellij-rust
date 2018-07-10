@@ -33,7 +33,8 @@ interface RustProjectSettingsService {
         var showTestToolWindow: Boolean = true,
         var doctestInjectionEnabled: Boolean = true,
         var runRustfmtOnSave: Boolean = false,
-        var useSkipChildren: Boolean = false
+        var useSkipChildren: Boolean = false,
+        var packagesSettings: CargoPackageSettings = CargoPackageSettings()
     ) {
         @get:Transient
         @set:Transient
@@ -44,8 +45,20 @@ interface RustProjectSettingsService {
             }
     }
 
+    data class CargoPackageSettings(
+        val cargoFeatures: FeaturesSetting = FeaturesSetting.Default,
+        val cargoFeaturesAdditional: Map<String, Boolean> = emptyMap()
+    )
+
     enum class MacroExpansionEngine {
         DISABLED, OLD, NEW
+    }
+
+    // We cannot add a toString() method, as the enum serialization/deserialization in XmlSerializerImpl uses toString()
+    enum class FeaturesSetting {
+        All,
+        Default,
+        NoDefault,
     }
 
     /**
@@ -68,6 +81,7 @@ interface RustProjectSettingsService {
     val doctestInjectionEnabled: Boolean
     val runRustfmtOnSave: Boolean
     val useSkipChildren: Boolean
+    val packagesSettings: CargoPackageSettings
 
     /*
      * Show a dialog for toolchain configuration

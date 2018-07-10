@@ -8,8 +8,10 @@ package org.rust.toml.completion
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
+import com.intellij.codeInsight.completion.CompletionUtil
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.util.ProcessingContext
+import org.rust.cargo.project.settings.rustSettings
 import org.rust.lang.core.psi.ext.ancestorStrict
 import org.rust.toml.StringValueInsertionHandler
 import org.rust.toml.getClosestKeyValueAncestor
@@ -77,22 +79,36 @@ class CargoTomlSpecificDependencyHeaderCompletionProvider : CompletionProvider<C
 }
 
 /** @see CargoTomlPsiPattern.inSpecificDependencyKeyValue */
-class CargoTomlSpecificDependencyVersionCompletionProvider : TomlKeyValueCompletionProviderBase() {
+class CargoTomlSpecificDependencyKeyCompletionProvider : TomlKeyValueCompletionProviderBase() {
     override fun completeKey(keyValue: TomlKeyValue, result: CompletionResultSet) {
         val dependencyNameKey = getDependencyKeyFromTableHeader(keyValue)
 
-        val version = getCrateLastVersion(dependencyNameKey) ?: return
-        result.addElement(LookupElementBuilder.create("version = \"$version\""))
+        val version = getCrateLastVersion(dependencyNameKey)
+        if (version != null) {
+            result.addElement(LookupElementBuilder.create("version = \"$version\""))
+        }
+        result.addElement(LookupElementBuilder.create("features = "))
     }
 
     override fun completeValue(keyValue: TomlKeyValue, result: CompletionResultSet) {
         val dependencyNameKey = getDependencyKeyFromTableHeader(keyValue)
-        val version = getCrateLastVersion(dependencyNameKey) ?: return
 
-        result.addElement(
-            LookupElementBuilder.create(version)
-                .withInsertHandler(StringValueInsertionHandler(keyValue))
-        )
+        val name = CompletionUtil.getOriginalElement(keyValue.key)?.text.orEmpty()
+        if (name == "version") {
+            val version = getCrateLastVersion(dependencyNameKey) ?: return
+            result.addElement(
+                LookupElementBuilder.create(version)
+                    .withInsertHandler(StringValueInsertionHandler(keyValue))
+            )
+        } else if (name == "features") {
+            val features = keyValue.project.rustSettings.packagesSettings.cargoFeaturesAdditional.keys
+            for (feature in features) { // TODO: inside TomlArray, not just TomlKey
+                result.addElement(
+                    LookupElementBuilder.create(feature)
+                        .withInsertHandler(StringValueInsertionHandler(keyValue))
+                )
+            }
+        }
     }
 
     private fun getDependencyKeyFromTableHeader(keyValue: TomlKeyValue): TomlKey {

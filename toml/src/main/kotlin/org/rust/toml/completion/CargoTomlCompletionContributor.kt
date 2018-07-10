@@ -8,10 +8,10 @@ package org.rust.toml.completion
 import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionType.BASIC
 import org.rust.toml.CargoTomlPsiPattern.inDependencyKeyValue
-import org.rust.toml.CargoTomlPsiPattern.inValueWithKey
 import org.rust.toml.CargoTomlPsiPattern.inKey
 import org.rust.toml.CargoTomlPsiPattern.inSpecificDependencyHeaderKey
 import org.rust.toml.CargoTomlPsiPattern.inSpecificDependencyKeyValue
+import org.rust.toml.CargoTomlPsiPattern.inValueWithKey
 import org.rust.toml.tomlPluginIsAbiCompatible
 
 class CargoTomlCompletionContributor : CompletionContributor() {
@@ -21,7 +21,7 @@ class CargoTomlCompletionContributor : CompletionContributor() {
             extend(BASIC, inValueWithKey("edition"), CargoTomlKnownValuesCompletionProvider(listOf("2015", "2018")))
             extend(BASIC, inDependencyKeyValue, CargoTomlDependencyCompletionProvider())
             extend(BASIC, inSpecificDependencyHeaderKey, CargoTomlSpecificDependencyHeaderCompletionProvider())
-            extend(BASIC, inSpecificDependencyKeyValue, CargoTomlSpecificDependencyVersionCompletionProvider())
+            extend(BASIC, inSpecificDependencyKeyValue, CargoTomlSpecificDependencyKeyCompletionProvider())
         }
     }
 }

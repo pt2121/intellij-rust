@@ -15,8 +15,7 @@ import com.intellij.util.xmlb.XmlSerializer.deserializeInto
 import org.jdom.Element
 import org.rust.cargo.project.configurable.RsProjectConfigurable
 import org.rust.cargo.project.settings.RustProjectSettingsService
-import org.rust.cargo.project.settings.RustProjectSettingsService.MacroExpansionEngine
-import org.rust.cargo.project.settings.RustProjectSettingsService.State
+import org.rust.cargo.project.settings.RustProjectSettingsService.*
 import org.rust.cargo.toolchain.ExternalLinter
 import org.rust.cargo.toolchain.RustToolchain
 
@@ -46,6 +45,7 @@ class RustProjectSettingsServiceImpl(
     override val doctestInjectionEnabled: Boolean get() = state.doctestInjectionEnabled
     override val runRustfmtOnSave: Boolean get() = state.runRustfmtOnSave
     override val useSkipChildren: Boolean get() = state.useSkipChildren
+    override val packagesSettings: CargoPackageSettings get() = state.packagesSettings
 
     override fun getState(): Element {
         val element = Element(serviceName)

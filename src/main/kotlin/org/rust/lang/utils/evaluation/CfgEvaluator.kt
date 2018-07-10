@@ -95,17 +95,10 @@ class CfgEvaluator(val options: CfgOptions, val features: Map<String, FeatureSta
         else -> Unknown
     }
 
-    private fun evaluateFeature(name: String): ThreeValuedLogic {
-        if (origin == PackageOrigin.WORKSPACE || origin == PackageOrigin.STDLIB) {
-            // Currently evaluates only dependency features
-            return Unknown
-        }
-
-        return when (features[name]) {
-            FeatureState.Enabled -> True
-            FeatureState.Disabled -> False
-            null -> Unknown
-        }
+    private fun evaluateFeature(name: String): ThreeValuedLogic = when (features[name]) {
+        FeatureState.Enabled -> True
+        FeatureState.Disabled -> False
+        null -> Unknown
     }
 
     companion object {
