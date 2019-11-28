@@ -8,12 +8,16 @@ package org.rust.lang.core.types.infer
 import org.rust.lang.core.psi.*
 import org.rust.lang.core.psi.ext.*
 import org.rust.lang.core.types.Substitution
+import org.rust.lang.core.types.consts.Const
+import org.rust.lang.core.types.consts.CtConstParameter
+import org.rust.lang.core.types.consts.CtUnknown
 import org.rust.lang.core.types.regions.ReEarlyBound
 import org.rust.lang.core.types.regions.ReStatic
 import org.rust.lang.core.types.regions.ReUnknown
 import org.rust.lang.core.types.regions.Region
 import org.rust.lang.core.types.ty.*
 import org.rust.lang.core.types.type
+import org.rust.lang.utils.evaluation.evaluate
 
 
 // Keep in sync with TyFingerprint-create
@@ -80,7 +84,8 @@ fun inferTypeReferenceType(ref: RsTypeReference, defaultTraitObjectRegion: Regio
             if (type.isSlice) {
                 TySlice(componentType)
             } else {
-                TyArray(componentType, type.arraySize)
+                val const = type.expr?.evaluate(TyInteger.USize)
+                TyArray(componentType, const ?: CtUnknown)
             }
         }
 
