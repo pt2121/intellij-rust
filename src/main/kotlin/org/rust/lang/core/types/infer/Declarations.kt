@@ -124,12 +124,15 @@ private fun <T> TypeFoldable<T>.substituteWithTraitObjectRegion(
 ): T = foldWith(object : TypeFolder {
     override fun foldTy(ty: Ty): Ty = when {
         ty is TyTypeParameter -> handleTraitObject(ty) ?: ty
-        ty.needToSubstitute -> ty.superFoldWith(this)
+        ty.needsSubst -> ty.superFoldWith(this)
         else -> ty
     }
 
     override fun foldRegion(region: Region): Region =
         (region as? ReEarlyBound)?.let { subst[it] } ?: region
+
+    override fun foldConst(const: Const): Const =
+        (const as? CtConstParameter)?.let { subst[it] } ?: const
 
     fun handleTraitObject(paramTy: TyTypeParameter): Ty? {
         val ty = subst[paramTy]

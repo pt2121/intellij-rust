@@ -7,7 +7,10 @@ package org.rust.lang.core.psi.ext
 
 import org.rust.lang.core.macros.RsExpandedElement
 import org.rust.lang.core.macros.expandedFromSequence
-import org.rust.lang.core.psi.*
+import org.rust.lang.core.psi.RsBlock
+import org.rust.lang.core.psi.RsExpr
+import org.rust.lang.core.psi.RsMacroCall
+import org.rust.lang.core.psi.RsStmt
 
 /**
  * Can contain [RsStmt]s and [RsExpr]s (which are equivalent to RsExprStmt(RsExpr))
@@ -37,13 +40,12 @@ val RsBlock.expandedStmtsAndTailExpr: Pair<List<RsExpandedElement>, RsExpr?>
 
 private val RsBlock.stmtsAndMacros: Sequence<RsElement>
     get() {
-        val parentItem = contextStrict<RsItemElement>()
-        val stub = greenStub
-        return if (stub != null && parentItem is RsConstant && parentItem.isConst) {
-            stub.childrenStubs.asSequence().map { it.psi }
-        } else {
-            childrenWithLeaves
-        }.filterIsInstance<RsElement>()
+        val children = greenStub
+            ?.childrenStubs
+            ?.asSequence()
+            ?.map { it.psi }
+            ?: childrenWithLeaves
+        return children.filterIsInstance<RsElement>()
     }
 
 private fun RsBlock.processExpandedStmtsInternal(processor: (RsExpandedElement) -> Boolean): Boolean {
