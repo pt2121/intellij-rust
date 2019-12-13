@@ -5,6 +5,7 @@
 
 package org.rust.lang.core.cfg
 
+import com.intellij.psi.util.PsiTreeUtil
 import org.rust.lang.core.cfg.CFGBuilder.ScopeCFKind.Break
 import org.rust.lang.core.cfg.CFGBuilder.ScopeCFKind.Continue
 import org.rust.lang.core.psi.*
@@ -238,12 +239,45 @@ class CFGBuilder(
     override fun visitPathExpr(pathExpr: RsPathExpr) =
         finishWithAstNode(pathExpr, pred)
 
+    override fun visitMacroBodyIdent(macroBodyIdent: RsMacroBodyIdent) =
+        finishWithAstNode(macroBodyIdent, pred)
+
     override fun visitMacroExpr(macroExpr: RsMacroExpr) {
+        val macroCallExit = process(macroExpr.macroCall, pred)
+
         if (macroExpr.type is TyNever) {
-            finishWith { addUnreachableNode() }
+            finishWithUnreachableNode(macroCallExit)
         } else {
-            finishWithAstNode(macroExpr, pred)
+            finishWith(macroCallExit)
         }
+    }
+
+    override fun visitMacroCall(macroCall: RsMacroCall) {
+        val subExprsExit = macroCall.exprMacroArgument?.expr?.let { process(it, pred) }
+            ?: macroCall.includeMacroArgument?.expr?.let { process(it, pred) }
+            ?: macroCall.logMacroArgument?.expr?.let { process(it, pred) }
+
+            ?: macroCall.concatMacroArgument?.exprList?.fold(pred) { acc, subExpr -> process(subExpr, acc) }
+            ?: macroCall.envMacroArgument?.exprList?.fold(pred) { acc, subExpr -> process(subExpr, acc) }
+            ?: macroCall.vecMacroArgument?.exprList?.fold(pred) { acc, subExpr -> process(subExpr, acc) }
+            ?: macroCall.formatMacroArgument?.formatMacroArgList?.map { it.expr }?.fold(pred) { acc, subExpr -> process(subExpr, acc) }
+            ?: macroCall.assertMacroArgument?.let { arg ->
+                listOfNotNull(arg.expr)
+                    .plus(arg.formatMacroArgList.map { it.expr })
+                    .fold(pred) { acc, subExpr -> process(subExpr, acc) }
+            }
+
+        val subElementsExit = subExprsExit ?: run {
+            val subPathsIdents = PsiTreeUtil.findChildrenOfAnyType(
+                macroCall,
+                true,
+                RsPathExpr::class.java,
+                RsMacroBodyIdent::class.java
+            )
+            subPathsIdents.fold(pred) { acc, subExpr -> process(subExpr, acc) }
+        }
+
+        finishWithAstNode(macroCall, subElementsExit)
     }
 
     override fun visitRangeExpr(rangeExpr: RsRangeExpr) =
