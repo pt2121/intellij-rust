@@ -172,6 +172,7 @@ fun Ty.isMovesByDefault(lookup: ImplLookup): Boolean =
         is TyArray -> base.isMovesByDefault(lookup)
         is TySlice -> elementType.isMovesByDefault(lookup)
         is TyTypeParameter -> !(parameter == TyTypeParameter.Self || lookup.isCopy(this))
+        is TyTraitObject -> !(trait.element in lookup.fnTraits || lookup.isCopy(this))
         else -> !lookup.isCopy(this)
     }
 

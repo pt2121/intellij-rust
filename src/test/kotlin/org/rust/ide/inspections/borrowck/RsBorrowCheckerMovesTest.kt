@@ -598,4 +598,11 @@ class RsBorrowCheckerMovesTest : RsInspectionsTestBase(RsBorrowCheckerInspection
             <error descr="Use of moved value">s</error>;
         }
     """, checkWarn = false)
+
+    @ProjectDescriptor(WithStdlibRustProjectDescriptor::class)
+    fun `test FnMut deref`() = checkByText("""
+        fn foo(foo: &mut FnMut(i32) -> bool) {
+            (*foo);
+        }
+    """, checkWarn = false)
 }

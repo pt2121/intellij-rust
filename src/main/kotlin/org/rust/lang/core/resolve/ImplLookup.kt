@@ -202,7 +202,7 @@ class ImplLookup(
     private val assignArithOps by lazy(NONE) {
         ArithmeticAssignmentOp.values().mapNotNull { it.findTrait(items) }
     }
-    private val fnTraits = listOfNotNull(items.Fn, items.FnMut, items.FnOnce)
+    val fnTraits = listOfNotNull(items.Fn, items.FnMut, items.FnOnce)
     val fnOnceOutput: RsTypeAlias? by lazy(NONE) {
         val trait = items.FnOnce ?: return@lazy null
         trait.findAssociatedType("Output")
