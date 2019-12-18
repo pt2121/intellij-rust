@@ -585,7 +585,6 @@ private UseSpeck_recover ::= !('}' | '{' | self | super | crate | identifier | '
 Alias ::= as ('_' | identifier) {
   implements = [ "org.rust.lang.core.psi.ext.RsNameIdentifierOwner" ]
   extends = "org.rust.lang.core.psi.ext.RsStubbedNamedElementImpl<?>"
-  mixin = "org.rust.lang.core.psi.ext.RsAliasImplMixin"
   stubClass = "org.rust.lang.core.stubs.RsAliasStub"
   elementTypeFactory = "org.rust.lang.core.stubs.StubImplementationsKt.factory"
 }

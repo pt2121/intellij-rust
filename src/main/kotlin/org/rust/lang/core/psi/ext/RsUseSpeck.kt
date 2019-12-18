@@ -22,7 +22,7 @@ val RsUseSpeck.pathOrQualifier: RsPath? get() = path ?: qualifier
 
 val RsUseSpeck.nameInScope: String? get() {
     if (useGroup != null) return null
-    alias?.name?.let { return it }
+    alias?.nameLikeElement?.text?.let { return it }
     val baseName = path?.referenceName ?: return null
     if (baseName == "self") {
         return qualifier?.referenceName

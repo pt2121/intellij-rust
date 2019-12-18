@@ -17,7 +17,7 @@ import org.rust.lang.core.resolve.ref.RsExternCrateReferenceImpl
 import org.rust.lang.core.resolve.ref.RsReference
 import org.rust.lang.core.stubs.RsExternCrateItemStub
 
-val RsExternCrateItem.nameWithAlias: String get() = alias?.name ?: referenceName
+val RsExternCrateItem.nameWithAlias: String get() = alias?.nameLikeElement?.text ?: referenceName
 
 val RsExternCrateItem.hasMacroUse: Boolean get() =
     queryAttributes.hasAttribute("macro_use")

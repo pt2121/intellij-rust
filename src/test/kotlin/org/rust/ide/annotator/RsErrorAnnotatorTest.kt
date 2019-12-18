@@ -3019,4 +3019,9 @@ class RsErrorAnnotatorTest : RsAnnotatorTestBase(RsErrorAnnotator::class) {
         const _: i32 = 1;
         const _: i32 = 1;
     """)
+
+    fun `test no E0252 multiple underscore aliases`() = checkErrors("""
+        use std::fmt::Debug as _;
+        use std::hash::Hash as _;
+    """)
 }
