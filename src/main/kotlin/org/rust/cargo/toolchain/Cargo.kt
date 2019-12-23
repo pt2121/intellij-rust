@@ -25,7 +25,6 @@ import com.intellij.util.text.SemVer
 import org.jetbrains.annotations.TestOnly
 import org.rust.cargo.CargoConstants.RUST_BACTRACE_ENV_VAR
 import org.rust.cargo.project.model.cargoProjects
-import org.rust.cargo.project.settings.RustProjectSettingsService.FeaturesSetting
 import org.rust.cargo.project.settings.rustSettings
 import org.rust.cargo.project.settings.toolchain
 import org.rust.cargo.project.workspace.CargoWorkspaceData
@@ -104,14 +103,10 @@ class Cargo(private val cargoExecutable: Path) {
         listener: ProcessListener? = null
     ): CargoWorkspaceData {
         val rawData = fetchMetadata(owner, projectDirectory, listener)
-        for (pkg in rawData.packages) {
-//            fetchMetadataForPackage(pkg)
-        }
         val buildPlan = fetchBuildPlan(owner, projectDirectory, listener)
         return CargoMetadata.clean(rawData, buildPlan)
     }
 
-    // fetch per each package?
     @Throws(ExecutionException::class)
     private fun fetchMetadata(
         owner: Project,
@@ -122,28 +117,8 @@ class Cargo(private val cargoExecutable: Path) {
         if (owner.rustSettings.useOffline) {
             additionalArgs += "-Zoffline"
         }
+        additionalArgs += "--all-features"
 
-        val featuresAdditional = owner.rustSettings.packagesSettings.cargoFeaturesAdditional.filter { it.value }.keys
-        when (owner.rustSettings.packagesSettings.cargoFeatures) {
-            FeaturesSetting.All -> {
-                additionalArgs += "--all-features"
-                // Passing --features is not necessary in this case
-                // cargo will just ignore them anyway
-            }
-            FeaturesSetting.Default -> {
-                if (featuresAdditional.isNotEmpty()) {
-                    additionalArgs += "--features"
-                    additionalArgs += featuresAdditional.joinToString(separator = " ")
-                }
-            }
-            FeaturesSetting.NoDefault -> {
-                additionalArgs += "--no-default-features"
-                if (featuresAdditional.isNotEmpty()) {
-                    additionalArgs += "--features"
-                    additionalArgs += featuresAdditional.joinToString(separator = " ")
-                }
-            }
-        }
         val json = CargoCommandLine("metadata", projectDirectory, additionalArgs)
             .execute(owner, listener = listener)
             .stdout

@@ -45,7 +45,6 @@ class RustProjectSettingsServiceImpl(
     override val doctestInjectionEnabled: Boolean get() = state.doctestInjectionEnabled
     override val runRustfmtOnSave: Boolean get() = state.runRustfmtOnSave
     override val useSkipChildren: Boolean get() = state.useSkipChildren
-    override val packagesSettings: CargoPackageSettings get() = state.packagesSettings
 
     override fun getState(): Element {
         val element = Element(serviceName)

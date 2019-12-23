@@ -11,10 +11,12 @@ import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.CompletionUtil
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.util.ProcessingContext
-import org.rust.cargo.project.settings.rustSettings
+import org.rust.cargo.project.model.impl.CargoProjectImpl
 import org.rust.lang.core.psi.ext.ancestorStrict
+import org.rust.lang.core.psi.ext.findCargoProject
 import org.rust.toml.StringValueInsertionHandler
 import org.rust.toml.getClosestKeyValueAncestor
+import org.toml.lang.psi.TomlArray
 import org.toml.lang.psi.TomlKey
 import org.toml.lang.psi.TomlKeyValue
 import org.toml.lang.psi.TomlTable
@@ -101,8 +103,14 @@ class CargoTomlSpecificDependencyKeyCompletionProvider : TomlKeyValueCompletionP
                     .withInsertHandler(StringValueInsertionHandler(keyValue))
             )
         } else if (name == "features") {
-            val features = keyValue.project.rustSettings.packagesSettings.cargoFeaturesAdditional.keys
-            for (feature in features) { // TODO: inside TomlArray, not just TomlKey
+            val cargoProject = keyValue.containingFile.findCargoProject() as? CargoProjectImpl ?: return
+            val workspace = cargoProject.workspace ?: return
+            val allFeatures = workspace.packages.map { it.features.names }.flatten()
+
+            val value = keyValue.value
+            if (value !is TomlArray) return
+
+            for (feature in allFeatures) { // TODO: inside TomlArray, not just TomlKey
                 result.addElement(
                     LookupElementBuilder.create(feature)
                         .withInsertHandler(StringValueInsertionHandler(keyValue))

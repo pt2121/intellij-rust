@@ -7,14 +7,16 @@ package org.rust.toml
 
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
+import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.editor.markup.GutterIconRenderer.Alignment
-import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
-import org.rust.cargo.project.settings.rustSettings
-import org.rust.cargo.project.workspace.CargoWorkspace.FeatureState
+import org.rust.cargo.project.model.impl.CargoProjectImpl
+import org.rust.cargo.project.workspace.CargoWorkspace
+import org.rust.cargo.project.workspace.FeatureState
 import org.rust.cargo.project.workspace.PackageOrigin
 import org.rust.ide.icons.RsIcons
 import org.rust.lang.core.psi.ext.findCargoPackage
+import org.rust.lang.core.psi.ext.findCargoProject
 import org.toml.lang.psi.TomlFile
 import org.toml.lang.psi.TomlKey
 import org.toml.lang.psi.TomlKeyValue
@@ -29,35 +31,31 @@ class CargoFeatureLineMarkerProvider : LineMarkerProvider {
             val file = el.containingFile as? TomlFile ?: continue
             if (file.name.toLowerCase() != "cargo.toml") continue
             if (el !is TomlTable) continue
+            val cargoProject = file.findCargoProject() as? CargoProjectImpl ?: continue
             val cargoPackage = file.findCargoPackage() ?: continue
-            val features = cargoPackage.features.associate { it.name to it.state }
-            result += annotateTable(el, features, file.project, cargoPackage.origin)
+            val features = cargoPackage.features.state
+            result += annotateTable(el, features, cargoProject, cargoPackage)
         }
     }
 
     private fun annotateTable(
         el: TomlTable,
         features: Map<String, FeatureState>,
-        project: Project,
-        packageOrigin: PackageOrigin
+        cargoProject: CargoProjectImpl,
+        cargoPackage: CargoWorkspace.Package
     ): Collection<LineMarkerInfo<PsiElement>> {
         val names = el.header.names
         val lastName = names.lastOrNull() ?: return emptyList()
         if (!lastName.isFeaturesKey) return emptyList()
 
-        project.rustSettings.modify { state ->
-            state.packagesSettings = state.packagesSettings.copy(
-                cargoFeaturesAdditional = state.packagesSettings.cargoFeaturesAdditional.toMutableMap().apply {
-                    for (feature in el.entries.map { it.name }) {
-                        this.putIfAbsent(feature, false)
-                    }
-                }
-            )
-        }
-
         return el.entries.mapNotNull {
             val featureName = it.name
-            genLineMarkerInfo(it.key, featureName, features[featureName], project, packageOrigin)
+            genLineMarkerInfo(
+                it.key,
+                featureName,
+                features[featureName],
+                cargoProject,
+                cargoPackage)
         }
     }
 
@@ -65,8 +63,8 @@ class CargoFeatureLineMarkerProvider : LineMarkerProvider {
         element: TomlKey,
         name: String,
         featureState: FeatureState?,
-        project: Project,
-        packageOrigin: PackageOrigin
+        cargoProject: CargoProjectImpl,
+        cargoPackage: CargoWorkspace.Package
     ): LineMarkerInfo<PsiElement>? {
         val anchor = element.bareKey
         val icon = when (featureState) {
@@ -76,16 +74,14 @@ class CargoFeatureLineMarkerProvider : LineMarkerProvider {
         }
 
         val toggleFeature = {
-            project.rustSettings.modify {
-                val oldValue = it.packagesSettings.cargoFeaturesAdditional.getOrDefault(name, false)
-                val newFeatures = it.packagesSettings.cargoFeaturesAdditional.toMutableMap().apply {
-                    this[name] = !oldValue
-                }
-                it.packagesSettings = it.packagesSettings.copy(cargoFeaturesAdditional = newFeatures)
+            val oldValue = cargoPackage.features.state.getOrDefault(name, FeatureState.Disabled).toBoolean()
+            runWriteAction {
+                cargoProject.userOverriddenFeatures[name] = !oldValue
             }
+            cargoPackage.syncFeatures(cargoProject.userOverriddenFeatures)
         }
 
-        return if (packageOrigin == PackageOrigin.WORKSPACE) {
+        return if (cargoPackage.origin == PackageOrigin.WORKSPACE) {
             LineMarkerInfo(
                 anchor,
                 anchor.textRange,

@@ -47,6 +47,7 @@ import org.rust.cargo.project.settings.RustProjectSettingsService
 import org.rust.cargo.project.settings.rustSettings
 import org.rust.cargo.project.settings.toolchain
 import org.rust.cargo.project.workspace.CargoWorkspace
+import org.rust.cargo.project.workspace.FeaturesSetting
 import org.rust.cargo.project.workspace.PackageOrigin
 import org.rust.cargo.project.workspace.StandardLibrary
 import org.rust.cargo.runconfig.command.workingDirectory
@@ -62,7 +63,6 @@ import org.rust.stdext.joinAll
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 
@@ -221,19 +221,41 @@ open class CargoProjectsServiceImpl(
         for (cargoProject in allProjects) {
             val cargoProjectElement = Element("cargoProject")
             cargoProjectElement.setAttribute("FILE", cargoProject.manifest.systemIndependentPath)
+
+            val featuresText = StringBuilder()
+            for (feature in cargoProject.userOverriddenFeatures) {
+                featuresText.append("${feature.key} = ${feature.value}\n")
+            }
+
+            cargoProjectElement.setAttribute("USER_FEATURES", featuresText.toString())
+            cargoProjectElement.setAttribute("FEATURES_SETTING", cargoProject.featuresSetting.toString())
+
             state.addContent(cargoProjectElement)
         }
         return state
     }
 
     override fun loadState(state: Element) {
-        val loaded = state.getChildren("cargoProject")
-            .mapNotNull { it.getAttributeValue("FILE") }
-            .map { CargoProjectImpl(Paths.get(it), this) }
+        val cargoProjects = state.getChildren("cargoProject")
+        val loaded = mutableListOf<CargoProjectImpl>()
+
+        for (cargoProject in cargoProjects) {
+            val file = cargoProject.getAttributeValue("FILE")
+            val featuresAttr = cargoProject.getAttributeValue("USER_FEATURES")
+            val rawFeatures = featuresAttr?.split("\n")?.filter { it.isNotBlank() }.orEmpty()
+            val features = rawFeatures.associate {
+                val (name, value) = it.split(" = ")
+                name to value.toBoolean()
+            }.toMutableMap()
+            val featuresSetting = FeaturesSetting.fromString(cargoProject.getAttributeValue("FEATURES_SETTING"))
+            val newProject = CargoProjectImpl(Paths.get(file), this, features, featuresSetting)
+            loaded.add(newProject)
+        }
+
         // Refresh projects via `invokeLater` to avoid model modifications
         // while the project is being opened. Use `updateSync` directly
         // instead of `modifyProjects` for this reason
-        projects.updateSync { _ -> loaded }
+        projects.updateSync { loaded }
             .whenComplete { _, _ ->
                 ApplicationManager.getApplication().invokeLater { refreshAllProjects() }
             }
@@ -254,6 +276,8 @@ open class CargoProjectsServiceImpl(
 data class CargoProjectImpl(
     override val manifest: Path,
     private val projectService: CargoProjectsServiceImpl,
+    override val userOverriddenFeatures: MutableMap<String, Boolean> = hashMapOf(),
+    override var featuresSetting: FeaturesSetting = FeaturesSetting.Default,
     private val rawWorkspace: CargoWorkspace? = null,
     private val stdlib: StandardLibrary? = null,
     override val rustcInfo: RustcInfo? = null,
@@ -336,8 +360,8 @@ data class CargoProjectImpl(
     }
 
     private fun refreshWorkspace(): CompletableFuture<CargoProjectImpl> {
-        val toolchain = toolchain ?:
-            return CompletableFuture.completedFuture(copy(workspaceStatus = UpdateStatus.UpdateFailed(
+        val toolchain = toolchain
+            ?: return CompletableFuture.completedFuture(copy(workspaceStatus = UpdateStatus.UpdateFailed(
                 "Can't update Cargo project, no Rust toolchain"
             )))
 
