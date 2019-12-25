@@ -8,6 +8,8 @@ package org.rust.lang.core.types.infer
 import org.rust.lang.core.psi.*
 import org.rust.lang.core.psi.ext.*
 import org.rust.lang.core.types.Substitution
+import org.rust.lang.core.types.consts.Const
+import org.rust.lang.core.types.consts.CtConstParameter
 import org.rust.lang.core.types.consts.CtUnknown
 import org.rust.lang.core.types.regions.ReEarlyBound
 import org.rust.lang.core.types.regions.ReStatic
