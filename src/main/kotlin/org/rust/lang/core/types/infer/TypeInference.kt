@@ -24,6 +24,7 @@ import org.rust.lang.core.types.consts.CtUnknown
 import org.rust.lang.core.types.regions.Region
 import org.rust.lang.core.types.ty.*
 import org.rust.lang.utils.RsDiagnostic
+import org.rust.lang.utils.evaluation.tryEvaluate
 import org.rust.lang.utils.snapshot.CombinedSnapshot
 import org.rust.lang.utils.snapshot.Snapshot
 import org.rust.openapiext.recursionGuard
@@ -576,7 +577,7 @@ class RsInferenceContext(
                 constUnificationTable.findValue(const) ?: const
             } else {
                 const
-            }
+            }.tryEvaluate()
     }
 
     fun <T : TypeFoldable<T>> resolveTypeVarsIfPossible(value: T): T {
@@ -594,7 +595,7 @@ class RsInferenceContext(
         override fun foldConst(const: Const): Const {
             if (!const.hasCtInfer) return const
             val res = shallowResolve(const)
-            return res.superFoldWith(this)
+            return res.superFoldWith(this).tryEvaluate()
         }
     }
 
@@ -618,7 +619,7 @@ class RsInferenceContext(
                 constUnificationTable.findValue(const) ?: CtUnknown
             } else {
                 const
-            }
+            }.tryEvaluate()
     }
 
     fun typeVarForParam(ty: TyTypeParameter): Ty = TyInfer.TyVar(ty)
