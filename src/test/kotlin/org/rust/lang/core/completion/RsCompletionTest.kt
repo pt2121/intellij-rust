@@ -877,4 +877,36 @@ class RsCompletionTest : RsCompletionTestBase() {
             Foo.foo()/*caret*/
         }
     """)
+
+    fun `test function completion without parentheses`() = doSingleCompletion("""
+        fn multiply_by_two(input: i32) -> i32 {
+            input * 2
+        }
+        fn main() {
+            Some(5).map(multi/*caret*/)
+        }
+    """, """
+        fn multiply_by_two(input: i32) -> i32 {
+            input * 2
+        }
+        fn main() {
+            Some(5).map(multiply_by_two)/*caret*/
+        }
+    """)
+
+    fun `test function completion with parentheses`() = doSingleCompletion("""
+        fn multiply_by_two(input: i32) -> i32 { input * 2 }
+        fn main() {
+            Some(5).map(|i| {
+                multi/*caret*/
+            });
+        }
+    """, """
+        fn multiply_by_two(input: i32) -> i32 { input * 2 }
+        fn main() {
+            Some(5).map(|i| {
+                multiply_by_two(/*caret*/)
+            });
+        }
+    """)
 }

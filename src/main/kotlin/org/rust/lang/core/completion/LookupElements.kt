@@ -17,6 +17,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import org.rust.ide.icons.RsIcons
 import org.rust.ide.presentation.getStubOnlyText
 import org.rust.ide.refactoring.RsNamesValidator
+import org.rust.ide.refactoring.suggestedNames
 import org.rust.lang.core.psi.*
 import org.rust.lang.core.psi.ext.*
 import org.rust.lang.core.resolve.AssocItemScopeEntryBase
@@ -246,7 +247,11 @@ open class RsDefaultInsertHandler : InsertHandler<LookupElement> {
                 } else {
                     val isMethodCall = context.getElementOfType<RsMethodOrField>() != null
                     if (!context.alreadyHasCallParens) {
-                        document.insertString(context.selectionEndOffset, "()")
+                        val valueArgumentList = context.getElementOfType<RsValueArgumentList>()
+                        if (valueArgumentList == null ||
+                            valueArgumentList.exprList.any { (it as? RsLambdaExpr)?.textRange?.contains(context.selectionEndOffset) == true }) {
+                            document.insertString(context.selectionEndOffset, "()")
+                        }
                     }
                     val caretShift = if (element.valueParameters.isEmpty() && (isMethodCall || !element.hasSelfParameters)) 2 else 1
                     EditorModificationUtil.moveCaretRelatively(context.editor, caretShift)
